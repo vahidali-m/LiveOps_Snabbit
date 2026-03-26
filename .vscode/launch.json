@@ -1,0 +1,28 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "live_ops",
+            "cwd": "live_ops",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "live_ops (profile mode)",
+            "cwd": "live_ops",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "live_ops (release mode)",
+            "cwd": "live_ops",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}
