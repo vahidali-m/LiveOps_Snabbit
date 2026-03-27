@@ -3,7 +3,8 @@ import 'package:live_ops/screens/home_screen.dart';
 import 'package:provider/provider.dart';
 import 'provider/job_provider.dart';
 
-void main() {
+Future<void> main() async {
+    
   runApp(
     ChangeNotifierProvider(
   create: (_) => JobProvider()..loadData(),

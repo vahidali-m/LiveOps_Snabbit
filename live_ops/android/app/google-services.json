@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "787666366458",
+    "project_id": "live-ops-app-b8213",
+    "storage_bucket": "live-ops-app-b8213.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:787666366458:android:e9d26dc9e428dfb906be43",
+        "android_client_info": {
+          "package_name": "com.example.live_ops"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBanaBHnZ_RLN33uCdILt-TOtsnh_lgFCU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
