@@ -55,7 +55,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: DropdownButtonFormField<String>(
-                value: provider.selectedRegion,
+                initialValue: provider.selectedRegion,
                 dropdownColor: cardColor,
                 style: const TextStyle(color: textPrimary),
                 decoration: const InputDecoration(border: InputBorder.none),
@@ -195,7 +195,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   }).toList(),
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),

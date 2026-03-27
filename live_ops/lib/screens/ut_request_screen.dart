@@ -304,7 +304,7 @@
     Widget _dropdownField(String label, String? value,
         List<DropdownMenuItem<String>> items, Function(String?) onChanged) {
       return DropdownButtonFormField(
-        value: value,
+        initialValue: value,
         dropdownColor: cardColor,
         style: TextStyle(color: textPrimary),
         decoration: _inputDecoration(label),
