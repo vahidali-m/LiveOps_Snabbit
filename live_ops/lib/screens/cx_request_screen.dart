@@ -16,8 +16,8 @@ class _CXRequestScreenState extends State<CXRequestScreen> {
   final jobIdController = TextEditingController();
   final expertIdController = TextEditingController();
 
-  String selectedRegion = "Delhi";
-  String selectedReason = "Cx not responding";
+  String? selectedRegion;
+  String? selectedReason ;
 
   bool isLoading = false;
 
@@ -44,7 +44,7 @@ class _CXRequestScreenState extends State<CXRequestScreen> {
     "Cx denying COD"
   ];
 
-  final regions = ["Delhi", "Mumbai", "Thane", "Bangalore"];
+  final regions = ["Delhi", "Mumbai", "Thane", "Bangalore", "Noida", "Pune", "Gurugram", "Hyderabad"];
 
   @override
   void initState() {
@@ -83,8 +83,8 @@ class _CXRequestScreenState extends State<CXRequestScreen> {
     try {
       await CXService.submitCX(
         jobId: jobIdController.text,
-        region: selectedRegion,
-        reason: selectedReason,
+        region: selectedRegion!,
+        reason: selectedReason!,
         expertId: expertIdController.text,
       );
 
@@ -227,15 +227,15 @@ class _CXRequestScreenState extends State<CXRequestScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    _input(jobIdController, "Job ID"),
+                    _input(jobIdController, "Job ID", isNumber: true),
                     const SizedBox(height: 10),
 
-                    _dropdown("Region", regions, selectedRegion, (v) {
+                    _dropdown("Region", regions, selectedRegion!, (v) {
                       setState(() => selectedRegion = v!);
                     }),
                     const SizedBox(height: 10),
 
-                    _dropdown("Reason", reasons, selectedReason, (v) {
+                    _dropdown("Reason", reasons, selectedReason!, (v) {
                       setState(() => selectedReason = v!);
                     }),
                     const SizedBox(height: 10),

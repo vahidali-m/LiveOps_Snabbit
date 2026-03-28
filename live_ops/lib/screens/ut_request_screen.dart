@@ -17,7 +17,7 @@ class _UTRequestScreenState extends State<UTRequestScreen>
   final TextEditingController expertIdController = TextEditingController();
   final TextEditingController utHoursController = TextEditingController();
   final TextEditingController requestBYController = TextEditingController();
-
+  String? selectUtHours;
   String? selectedRegion;
   String? selectedReason;
   String? hasJob;
@@ -86,7 +86,7 @@ class _UTRequestScreenState extends State<UTRequestScreen>
         requestBy: requestBYController.text,
         expertId: expertIdController.text,
         region: selectedRegion!,
-        utHours: utHoursController.text,
+        utHours: selectUtHours!,
         reason: selectedReason!,
         hasJob: hasJob!,
       );
@@ -98,7 +98,7 @@ class _UTRequestScreenState extends State<UTRequestScreen>
       );
       requestBYController.clear();
       expertIdController.clear();
-      utHoursController.clear();
+      selectUtHours = null;
       selectedRegion = null;
       selectedReason = null;
       hasJob = null;
@@ -242,8 +242,11 @@ class _UTRequestScreenState extends State<UTRequestScreen>
                 (v) => setState(() => selectedRegion = v)),
             const SizedBox(height: 10),
 
-            _inputField(utHoursController, 'UT Hours'),
+            
+            _dropdownField('UtHours', selectUtHours, _utHours(),
+                (v) => setState(() => selectUtHours = v)),
             const SizedBox(height: 10),
+
 
             _dropdownField('Reason', selectedReason, _reasons(),
                 (v) => setState(() => selectedReason = v)),
@@ -492,6 +495,17 @@ class _UTRequestScreenState extends State<UTRequestScreen>
     ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList();
   }
 
+    List<DropdownMenuItem<String>> _utHours() {
+    return [
+      '-1',
+      '-2',
+      '-3',
+      '-4',
+      'Till End'
+    ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList();
+  }
+
+
   List<DropdownMenuItem<String>> _reasons() {
     return [
       'Denying to do',
@@ -503,3 +517,4 @@ class _UTRequestScreenState extends State<UTRequestScreen>
     ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList();
   }
 }
+

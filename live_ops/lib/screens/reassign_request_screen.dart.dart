@@ -447,17 +447,18 @@ class _ReassignRequestScreenState extends State<ReassignRequestScreen>
       'Hyderabad'
     ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList();
   }
+  
 
   List<DropdownMenuItem<String>> _reasons() {
     return [
-      'Denying to go',
-      'Fav expert',
-      'Cross Cluster',
+      'Denying to do',
+      'Favourite expert',
+      'Cross Hood',
       'Customer Request',
       'Behaviour issue',
       'Need pet friendly ex',
       'Not Responding',
-      'Logged Out'
+      'Logged Out',
       'Poor Quality of Work'
     ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList();
   }
