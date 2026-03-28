@@ -1,7 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:live_ops/models/Reassign_request_model.dart';
+import 'package:live_ops/models/cx_request_model.dart';
+import 'package:live_ops/models/breach_model.dart';
 import 'package:live_ops/screens/request_menu_screen.dart';
 import 'package:live_ops/services/sheet_service_reassign.dart';
+import 'package:live_ops/services/sheet_service_cx.dart';
+import 'package:live_ops/services/sheet_service_breach.dart';
 import '../services/sheet_servicee.dart';
 import '../models/ut_request_model.dart';
 import 'dashboard_screen.dart';
@@ -21,6 +26,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<UTRequest> utRequests = [];
   List<ReassignRequest> reassignRequest = [];
+  List<CXRequest> cxRequests = [];
+  List<Breach> breaches = []; // ✅ ADDED
+
+  Timer? autoRefreshTimer;
 
   // 🎨 WHITE + PINK THEME
   static const bgColor = Color(0xFFF5F5F7);
@@ -33,18 +42,49 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     loadData();
+    autoRefreshTimer =
+        Timer.periodic(const Duration(minutes: 2), (_) => loadData());
+  }
+
+  @override
+  void dispose() {
+    autoRefreshTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> loadData() async {
-    final utData = await SheetService.fetchUTRequests();
-    final reassignData = await ReassignService.fetchReassign();
-    setState(() {
-      utRequests = utData;
-      reassignRequest = reassignData;
-    });
+    if (!mounted) return;
+    try {
+      final utData = await SheetService.fetchUTRequests();
+      final reassignData = await ReassignService.fetchReassign();
+
+      List<CXRequest> cxData = [];
+      try {
+        cxData = await CXService.fetchCX();
+      } catch (e) {
+        print("❌ CX FETCH ERROR: $e");
+      }
+
+      List<Breach> breachData = []; // ✅ ADDED
+      try {
+        breachData = await BreachService.fetchBreaches();
+      } catch (e) {
+        print("❌ BREACH FETCH ERROR: $e");
+      }
+
+      if (!mounted) return;
+      setState(() {
+        utRequests = utData;
+        reassignRequest = reassignData;
+        cxRequests = cxData;
+        breaches = breachData; // ✅ ADDED
+      });
+    } catch (e) {
+      print("❌ LOAD DATA ERROR: $e");
+      if (!mounted) return;
+    }
   }
 
-  // 🔥 UT REGION
   Map<String, int> getUTByRegion() {
     Map<String, int> map = {};
     for (var r in utRequests) {
@@ -53,11 +93,26 @@ class _HomeScreenState extends State<HomeScreen> {
     return map;
   }
 
-  // 🔥 REASSIGN REGION
   Map<String, int> getReassignByRegion() {
     Map<String, int> map = {};
     for (var r in reassignRequest) {
       map[r.region] = (map[r.region] ?? 0) + 1;
+    }
+    return map;
+  }
+
+  Map<String, int> getCXByRegion() {
+    Map<String, int> map = {};
+    for (var r in cxRequests) {
+      map[r.region] = (map[r.region] ?? 0) + 1;
+    }
+    return map;
+  }
+
+  Map<String, int> getBreachesByRegion() { // ✅ ADDED
+    Map<String, int> map = {};
+    for (var b in breaches) {
+      map[b.region] = (map[b.region] ?? 0) + 1;
     }
     return map;
   }
@@ -84,8 +139,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: bgColor,
-
-      // 🔥 CONDITIONAL APP BAR
       appBar: _currentIndex == 0
           ? AppBar(
               backgroundColor: primaryAccent,
@@ -151,10 +204,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           unselectedLabelStyle: const TextStyle(fontSize: 11),
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: "Home"),
-            BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: "Dashboard"),
-            BottomNavigationBarItem(icon: Icon(Icons.assignment_rounded), label: "Requests"),
-            BottomNavigationBarItem(icon: Icon(Icons.warning_rounded), label: "Breaches"),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.home_rounded), label: "Home"),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.dashboard_rounded), label: "Dashboard"),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.assignment_rounded), label: "Requests"),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.warning_rounded), label: "Breaches"),
           ],
         ),
       ),
@@ -165,6 +222,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _homeUI(int totalJobs, int completedJobs) {
     final utMap = getUTByRegion();
     final reassignMap = getReassignByRegion();
+    final cxMap = getCXByRegion();
+    final breachMap = getBreachesByRegion(); // ✅ ADDED
+
+    // ✅ Critical breach count (45+ mins)
+    final criticalBreaches = breaches.where((b) => b.minutes >= 45).length;
 
     return RefreshIndicator(
       color: primaryAccent,
@@ -173,7 +235,6 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.all(16),
         children: [
 
-          // Header label
           const Padding(
             padding: EdgeInsets.only(bottom: 12),
             child: Text(
@@ -187,35 +248,62 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // 🔥 KPI ROW 1
+          // 🔥 KPI ROW 1 — Jobs
           Row(
             children: [
-              _bigCard("Total Jobs", totalJobs, const Color(0xFF2979FF), Icons.work_rounded),
-              _bigCard("Completed", completedJobs, const Color(0xFF00C853), Icons.check_circle_rounded),
+              _bigCard("Total Jobs", totalJobs, const Color(0xFF2979FF),
+                  Icons.work_rounded),
+              _bigCard("Completed", completedJobs, const Color(0xFF00C853),
+                  Icons.check_circle_rounded),
             ],
           ),
 
-          // 🔥 KPI ROW 2
+          // 🔥 KPI ROW 2 — Requests
           Row(
             children: [
-              _bigCard("UT", utRequests.length, primaryAccent, Icons.swap_horiz_rounded),
-              _bigCard("Reassign", reassignRequest.length, const Color(0xFF9C27B0), Icons.people_alt_rounded),
+              _bigCard("UT", utRequests.length, primaryAccent,
+                  Icons.access_time_rounded),
+              _bigCard("Reassign", reassignRequest.length,
+                  const Color(0xFF9C27B0), Icons.swap_horiz_rounded),
+              _bigCard("CX", cxRequests.length,
+                  const Color(0xFF00897B), Icons.contact_support_rounded),
+            ],
+          ),
+
+          // ✅ KPI ROW 3 — Breaches
+          Row(
+            children: [
+              _bigCard("Breaches", breaches.length,
+                  const Color(0xFFFF6D00), Icons.warning_amber_rounded),
+              _bigCard("Critical", criticalBreaches,
+                  const Color(0xFFD50000), Icons.local_fire_department_rounded),
             ],
           ),
 
           const SizedBox(height: 24),
 
-          // 🔥 UT GRAPH
           _sectionTitle("UT Requests by Region"),
           const SizedBox(height: 10),
           _modernGraph(utMap, primaryAccent),
 
           const SizedBox(height: 24),
 
-          // 🔥 REASSIGN GRAPH
           _sectionTitle("Reassign Requests by Region"),
           const SizedBox(height: 10),
           _modernGraph(reassignMap, const Color(0xFF9C27B0)),
+
+          const SizedBox(height: 24),
+
+          _sectionTitle("CX Requests by Region"),
+          const SizedBox(height: 10),
+          _modernGraph(cxMap, const Color(0xFF00897B)),
+
+          const SizedBox(height: 24),
+
+          // ✅ BREACH GRAPH ADDED
+          _sectionTitle("Breaches by Region"),
+          const SizedBox(height: 10),
+          _modernGraph(breachMap, const Color(0xFFFF6D00)),
 
           const SizedBox(height: 16),
         ],
@@ -281,74 +369,96 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 🔥 MODERN GRAPH
   Widget _modernGraph(Map<String, int> data, Color color) {
-    int max = data.values.isEmpty ? 1 : data.values.reduce((a, b) => a > b ? a : b);
+  int max = data.values.isEmpty
+      ? 1
+      : data.values.reduce((a, b) => a > b ? a : b);
 
-    return Container(
-      height: 200,
-      padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: data.isEmpty
-          ? const Center(
-              child: Text("No data", style: TextStyle(color: textSecondary, fontSize: 13)),
-            )
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: data.entries.map((e) {
-                double height = (e.value / max) * 120;
-                bool isMax = e.value == max;
+  // ✅ Sort entries by value descending
+  final sortedEntries = data.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
 
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 3),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          "${e.value}",
-                          style: TextStyle(
-                            color: isMax ? textPrimary : textSecondary,
-                            fontSize: 10,
-                            fontWeight: isMax ? FontWeight.w700 : FontWeight.normal,
-                          ),
+  return Container(
+    height: 200,
+    padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
+    decoration: BoxDecoration(
+      color: cardColor,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.06),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    ),
+    child: data.isEmpty
+        ? const Center(
+            child: Text("No data",
+                style: TextStyle(color: textSecondary, fontSize: 13)),
+          )
+        : Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: sortedEntries.map((e) {  // ✅ use sortedEntries
+              double height = (e.value / max) * 120;
+              bool isMax = e.value == max;
+
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(
+                        "${e.value}",
+                        style: TextStyle(
+                          color: isMax ? textPrimary : textSecondary,
+                          fontSize: 10,
+                          fontWeight:
+                              isMax ? FontWeight.w700 : FontWeight.normal,
                         ),
-                        const SizedBox(height: 4),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 500),
-                          curve: Curves.easeOutCubic,
-                          height: height,
-                          decoration: BoxDecoration(
-                            color: isMax ? color : color.withOpacity(0.35),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
+                      ),
+                      const SizedBox(height: 4),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 500),
+                        curve: Curves.easeOutCubic,
+                        height: height,
+                        decoration: BoxDecoration(
+                          color: isMax ? color : color.withOpacity(0.35),
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          e.key.length >= 3 ? e.key.substring(0, 3) : e.key,
-                          style: const TextStyle(
-                            color: textSecondary,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                          ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                       _regionAbbr(e.key),
+                        style: const TextStyle(
+                          color: textSecondary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                );
-              }).toList(),
-            ),
-    );
+                ),
+              );
+            }).toList(),
+          ),
+  );
+}
+
+String _regionAbbr(String region) {
+  switch (region.trim().toLowerCase()) {
+    case 'thane':        return 'THN';
+    case 'pune':         return 'PNE';
+    case 'mumbai':       return 'MUM';
+    case 'delhi':        return 'DHL';
+    case 'navi mumbai':  return 'N-MUM';
+    case 'bangalore':    return 'BLR';
+    case 'noida':        return 'NOD';
+    case 'gurugram':     return 'GGN';
+    case 'hyderabad':    return 'HYD';
+    default:             return region.length >= 3 ? region.substring(0, 3).toUpperCase() : region.toUpperCase();
   }
+}
 }

@@ -17,6 +17,7 @@ class _UTRequestScreenState extends State<UTRequestScreen>
   final TextEditingController expertIdController = TextEditingController();
   final TextEditingController utHoursController = TextEditingController();
   final TextEditingController requestBYController = TextEditingController();
+
   String? selectUtHours;
   String? selectedRegion;
   String? selectedReason;
@@ -43,10 +44,8 @@ class _UTRequestScreenState extends State<UTRequestScreen>
   void initState() {
     super.initState();
     loadRequests();
-
     tabController = TabController(length: 5, vsync: this);
     tabController.addListener(applyFilters);
-
     autoRefreshTimer =
         Timer.periodic(const Duration(minutes: 2), (_) => loadRequests());
   }
@@ -59,29 +58,34 @@ class _UTRequestScreenState extends State<UTRequestScreen>
   }
 
   Future<void> loadRequests() async {
-    final data = await SheetService.fetchUTRequests();
-
-    setState(() {
-      allRequests = data.reversed.toList();
-      applyFilters();
-    });
+    if (!mounted) return;
+    try {
+      final data = await SheetService.fetchUTRequests();
+      if (!mounted) return;
+      setState(() {
+        allRequests = data.reversed.toList();
+        applyFilters();
+      });
+    } catch (e) {
+      if (!mounted) return;
+    }
   }
 
   void applyFilters() {
     String tab = ['All', 'Pending', 'Approved', 'Rejected', 'Incorrect_ID']
         [tabController.index];
-
     filteredRequests = allRequests.where((e) {
       return tab == 'All' || e.status == tab;
     }).toList();
-
     setState(() {});
   }
 
   Future<void> submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => isSubmitting = true);
+    if (!_formKey.currentState!.validate()) return;
 
+    setState(() => isSubmitting = true);
+
+    try {
       await SheetService.submitUT(
         requestBy: requestBYController.text,
         expertId: expertIdController.text,
@@ -90,21 +94,53 @@ class _UTRequestScreenState extends State<UTRequestScreen>
         reason: selectedReason!,
         hasJob: hasJob!,
       );
+    } catch (e) {
+      final errorStr = e.toString().toLowerCase();
+      final isJsonError = errorStr.contains('formatexception') ||
+          errorStr.contains('jsonunsupportedobjecterror') ||
+          errorStr.contains('unexpected character') ||
+          errorStr.contains('not a subtype') ||
+          errorStr.contains('type \'null\'');
 
-      setState(() => isSubmitting = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Submitted ✅')),
-      );
-      requestBYController.clear();
-      expertIdController.clear();
-      selectUtHours = null;
-      selectedRegion = null;
-      selectedReason = null;
-      hasJob = null;
-
-      await loadRequests();
+      if (!isJsonError) {
+        if (mounted) {
+          setState(() => isSubmitting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Error: $e"),
+              backgroundColor: const Color(0xFFD50000),
+            ),
+          );
+        }
+        return;
+      }
     }
+
+    requestBYController.clear();
+    expertIdController.clear();
+
+    if (mounted) {
+      setState(() {
+        selectUtHours = null;
+        selectedRegion = null;
+        selectedReason = null;
+        hasJob = null;
+      });
+    }
+
+    await loadRequests();
+
+    if (!mounted) return;
+
+    setState(() => isSubmitting = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Submitted ✅'),
+        backgroundColor: Color(0xFF00C853),
+        duration: Duration(seconds: 3),
+      ),
+    );
   }
 
   @override
@@ -113,7 +149,8 @@ class _UTRequestScreenState extends State<UTRequestScreen>
     int pending = allRequests.where((e) => e.status == 'Pending').length;
     int approved = allRequests.where((e) => e.status == 'Approved').length;
     int rejected = allRequests.where((e) => e.status == 'Rejected').length;
-    int incorrectid = allRequests.where((e) => e.status == 'Incorrect_ID').length;
+    int incorrectid =
+        allRequests.where((e) => e.status == 'Incorrect_ID').length;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -136,7 +173,8 @@ class _UTRequestScreenState extends State<UTRequestScreen>
                 color: Colors.white.withOpacity(0.25),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.access_time_rounded, color: Colors.white, size: 18),
+              child: const Icon(Icons.access_time_rounded,
+                  color: Colors.white, size: 18),
             ),
             const SizedBox(width: 10),
             const Text(
@@ -156,7 +194,8 @@ class _UTRequestScreenState extends State<UTRequestScreen>
           indicatorWeight: 3,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white60,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+          labelStyle:
+              const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
           unselectedLabelStyle: const TextStyle(fontSize: 12),
           tabs: const [
             Tab(text: 'All'),
@@ -242,11 +281,9 @@ class _UTRequestScreenState extends State<UTRequestScreen>
                 (v) => setState(() => selectedRegion = v)),
             const SizedBox(height: 10),
 
-            
             _dropdownField('UtHours', selectUtHours, _utHours(),
                 (v) => setState(() => selectUtHours = v)),
             const SizedBox(height: 10),
-
 
             _dropdownField('Reason', selectedReason, _reasons(),
                 (v) => setState(() => selectedReason = v)),
@@ -271,19 +308,35 @@ class _UTRequestScreenState extends State<UTRequestScreen>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryAccent,
                   foregroundColor: Colors.white,
+                  disabledBackgroundColor: primaryAccent.withOpacity(0.7),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 child: isSubmitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
+                    ? const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Text(
+                            "Submitting...",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              letterSpacing: 0.5,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
                       )
                     : const Text(
                         'Submit Request',
@@ -357,7 +410,8 @@ class _UTRequestScreenState extends State<UTRequestScreen>
                 if (r.hasJob == "Yes")
                   Container(
                     margin: const EdgeInsets.only(top: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xFFD50000).withOpacity(0.08),
                       borderRadius: BorderRadius.circular(6),
@@ -463,7 +517,7 @@ class _UTRequestScreenState extends State<UTRequestScreen>
             const SizedBox(height: 6),
             Text(
               '$value',
-              style: TextStyle(
+              style: const TextStyle(
                 color: textPrimary,
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
@@ -483,38 +537,21 @@ class _UTRequestScreenState extends State<UTRequestScreen>
   // ---------------- DATA ----------------
   List<DropdownMenuItem<String>> _regions() {
     return [
-      'Thane',
-      'Bangalore',
-      'Delhi',
-      'Pune',
-      'Noida',
-      'Gurugram',
-      'Mumbai',
-      'Navi Mumbai',
-      'Hyderabad'
+      'Thane', 'Bangalore', 'Delhi', 'Pune',
+      'Noida', 'Gurugram', 'Mumbai', 'Navi Mumbai', 'Hyderabad'
     ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList();
   }
 
-    List<DropdownMenuItem<String>> _utHours() {
-    return [
-      '-1',
-      '-2',
-      '-3',
-      '-4',
-      'Till End'
-    ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList();
+  List<DropdownMenuItem<String>> _utHours() {
+    return ['-1', '-2', '-3', '-4', 'Till End']
+        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+        .toList();
   }
-
 
   List<DropdownMenuItem<String>> _reasons() {
     return [
-      'Denying to do',
-      'Health Issue',
-      'Monthly cycle',
-      'Family Problem',
-      'Not Responding',
-      'Battery Swap'
+      'Denying to do', 'Health Issue', 'Monthly cycle',
+      'Family Problem', 'Not Responding', 'Battery Swap'
     ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList();
   }
 }
-

@@ -12,11 +12,12 @@ class BreachesScreen extends StatefulWidget {
 class _BreachesScreenState extends State<BreachesScreen> {
   List<Breach> breaches = [];
 
-  final bgColor = const Color(0xFF0F172A);
-  final cardColor = const Color(0xFF1E293B);
-  final textPrimary = Colors.white;
-  final textSecondary = Colors.grey;
+  // 🎨 WHITE + PINK THEME (matching CXRequestScreen)
+  static const bgColor = Color(0xFFF5F5F7);
+  static const cardColor = Colors.white;
   static const primaryAccent = Color(0xFFE91E63);
+  static const textPrimary = Color(0xFF1A1A2E);
+  static const textSecondary = Color(0xFF7A7A9A);
 
   @override
   void initState() {
@@ -57,18 +58,58 @@ class _BreachesScreenState extends State<BreachesScreen> {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: primaryAccent,
-        title: const Text("BREACHES (30+ mins)"),
-        centerTitle: true,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFAD1457), Color(0xFFE91E63)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.25),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.warning_amber_rounded,
+                  color: Colors.white, size: 18),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              'BREACHES (30+ mins)',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.5,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
       ),
       body: RefreshIndicator(
+        color: primaryAccent,
         onRefresh: loadData,
-        child: ListView(
-          padding: const EdgeInsets.all(14),
-          children: sortedRegions.map((regionEntry) {
-            return _regionTile(regionEntry.key, regionEntry.value);
-          }).toList(),
-        ),
+        child: breaches.isEmpty
+            ? ListView(
+                children: [
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.4),
+                  const Center(
+                    child: CircularProgressIndicator(color: primaryAccent),
+                  ),
+                ],
+              )
+            : ListView(
+                padding: const EdgeInsets.all(14),
+                children: sortedRegions.map((regionEntry) {
+                  return _regionTile(regionEntry.key, regionEntry.value);
+                }).toList(),
+              ),
       ),
     );
   }
@@ -86,27 +127,57 @@ class _BreachesScreenState extends State<BreachesScreen> {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        collapsedIconColor: Colors.white,
-        iconColor: Colors.white,
+        collapsedIconColor: primaryAccent,
+        iconColor: primaryAccent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        collapsedShape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
 
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(region.toUpperCase(),
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold)),
-            _countBadge(list.length)
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: primaryAccent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  region.toUpperCase(),
+                  style: const TextStyle(
+                    color: textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+            _countBadge(list.length),
           ],
         ),
 
-        subtitle: Text(
-          "Top clusters shown first",
-          style: TextStyle(color: textSecondary, fontSize: 12),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(left: 16, top: 2),
+          child: Text(
+            "Top clusters shown first",
+            style: const TextStyle(color: textSecondary, fontSize: 11),
+          ),
         ),
 
         children: sortedClusters.map((c) {
@@ -122,11 +193,12 @@ class _BreachesScreenState extends State<BreachesScreen> {
     list.sort((a, b) => b.minutes.compareTo(a.minutes));
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF020617),
+        color: const Color(0xFFF8F0F4),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFFE0EC), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,18 +207,30 @@ class _BreachesScreenState extends State<BreachesScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(cluster,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14)),
-              _countBadge(list.length)
+              Row(
+                children: [
+                  const Icon(Icons.location_on_rounded,
+                      color: primaryAccent, size: 15),
+                  const SizedBox(width: 5),
+                  Text(
+                    cluster,
+                    style: const TextStyle(
+                      color: textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+              _countBadge(list.length),
             ],
           ),
 
           const SizedBox(height: 8),
+          const Divider(color: Color(0xFFFFD6E7), height: 1),
+          const SizedBox(height: 8),
 
-          // 🔥 JOB LIST (NO EXTRA EXPANSION)
+          // 🔥 JOB LIST
           ...list.map((b) => _jobTile(b)),
         ],
       ),
@@ -155,53 +239,98 @@ class _BreachesScreenState extends State<BreachesScreen> {
 
   // ================= JOB =================
   Widget _jobTile(Breach b) {
+    final isHighBreach = b.minutes >= 45;
+    final breachColor =
+        isHighBreach ? const Color(0xFFD50000) : const Color(0xFFFF6D00);
+
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 5),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFF111827),
+        color: cardColor,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: breachColor.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
-          // LEFT
+          // LEFT ACCENT BAR
+          Container(
+            width: 3,
+            height: 48,
+            decoration: BoxDecoration(
+              color: breachColor,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(width: 10),
+
+          // CONTENT
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Job: ${b.jobId}",
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
-
-                const SizedBox(height: 4),
-
-                Text("${b.runnerName} • ${b.hood}",
-                    style: TextStyle(color: textSecondary)),
-
-                Text("Accepted: ${b.acceptedAt}",
-                    style: TextStyle(color: textSecondary, fontSize: 12)),
+                Text(
+                  "Job: ${b.jobId}",
+                  style: const TextStyle(
+                    color: textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  "${b.runnerName} • ${b.hood}",
+                  style: const TextStyle(color: textSecondary, fontSize: 12),
+                ),
+                Text(
+                  "Accepted: ${b.acceptedAt}",
+                  style: const TextStyle(color: textSecondary, fontSize: 11),
+                ),
               ],
             ),
           ),
 
-          // RIGHT (BREACH LEVEL)
+          // BREACH BADGE
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: b.minutes >= 45
-                  ? Colors.red.withOpacity(0.2)
-                  : Colors.orange.withOpacity(0.2),
+              color: breachColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: breachColor.withOpacity(0.3)),
             ),
-            child: Text(
-              "${b.minutes}m",
-              style: TextStyle(
-                color: b.minutes >= 45 ? Colors.red : Colors.orange,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Column(
+              children: [
+                Text(
+                  "${b.minutes}m",
+                  style: TextStyle(
+                    color: breachColor,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  isHighBreach ? "CRITICAL" : "WARNING",
+                  style: TextStyle(
+                    color: breachColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 9,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
             ),
-          )
+          ),
         ],
       ),
     );
@@ -212,13 +341,17 @@ class _BreachesScreenState extends State<BreachesScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.2),
+        color: primaryAccent.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: primaryAccent.withOpacity(0.3)),
       ),
       child: Text(
         "$count",
         style: const TextStyle(
-            color: Colors.red, fontWeight: FontWeight.bold),
+          color: primaryAccent,
+          fontWeight: FontWeight.w800,
+          fontSize: 12,
+        ),
       ),
     );
   }

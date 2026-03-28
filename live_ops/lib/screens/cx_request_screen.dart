@@ -17,7 +17,7 @@ class _CXRequestScreenState extends State<CXRequestScreen> {
   final expertIdController = TextEditingController();
 
   String? selectedRegion;
-  String? selectedReason ;
+  String? selectedReason;
 
   bool isLoading = false;
 
@@ -44,7 +44,10 @@ class _CXRequestScreenState extends State<CXRequestScreen> {
     "Cx denying COD"
   ];
 
-  final regions = ["Delhi", "Mumbai", "Thane", "Bangalore", "Noida", "Pune", "Gurugram", "Hyderabad"];
+  final regions = [
+    "Delhi", "Mumbai", "Thane", "Bangalore",
+    "Noida", "Pune", "Gurugram", "Hyderabad"
+  ];
 
   @override
   void initState() {
@@ -63,16 +66,19 @@ class _CXRequestScreenState extends State<CXRequestScreen> {
   }
 
   Future<void> loadRequests() async {
+    if (!mounted) return;
     setState(() => isLoadingRequests = true);
     try {
       final data = await CXService.fetchCX();
+      if (!mounted) return;
       setState(() {
         allRequests = data.reversed.toList();
+        isLoadingRequests = false;
       });
     } catch (e) {
-      // silently fail
+      if (!mounted) return;
+      setState(() => isLoadingRequests = false);
     }
-    setState(() => isLoadingRequests = false);
   }
 
   Future<void> submit() async {
@@ -87,22 +93,51 @@ class _CXRequestScreenState extends State<CXRequestScreen> {
         reason: selectedReason!,
         expertId: expertIdController.text,
       );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Request Submitted ✅")),
-      );
-
-      jobIdController.clear();
-      expertIdController.clear();
-
-      await loadRequests();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
+      final errorStr = e.toString().toLowerCase();
+      final isJsonError = errorStr.contains('formatexception') ||
+          errorStr.contains('jsonunsupportedobjecterror') ||
+          errorStr.contains('unexpected character') ||
+          errorStr.contains('not a subtype') ||
+          errorStr.contains('type \'null\'');
+
+      if (!isJsonError) {
+        if (mounted) {
+          setState(() => isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Error: $e"),
+              backgroundColor: const Color(0xFFD50000),
+            ),
+          );
+        }
+        return;
+      }
     }
 
+    jobIdController.clear();
+    expertIdController.clear();
+
+    if (mounted) {
+      setState(() {
+        selectedRegion = null;
+        selectedReason = null;
+      });
+    }
+
+    await loadRequests();
+
+    if (!mounted) return;
+
     setState(() => isLoading = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Request Submitted ✅"),
+        backgroundColor: Color(0xFF00C853),
+        duration: Duration(seconds: 3),
+      ),
+    );
   }
 
   // ================= STATUS HELPERS =================
@@ -138,10 +173,14 @@ class _CXRequestScreenState extends State<CXRequestScreen> {
   @override
   Widget build(BuildContext context) {
     int total = allRequests.length;
-    int pending = allRequests.where((r) => r.status.toLowerCase() == 'pending').length;
-    int resolved = allRequests.where((r) =>
-        r.status.toLowerCase() == 'resolved' ||
-        r.status.toLowerCase() == 'approved').length;
+    int pending = allRequests
+        .where((r) => r.status.toLowerCase() == 'pending')
+        .length;
+    int resolved = allRequests
+        .where((r) =>
+            r.status.toLowerCase() == 'resolved' ||
+            r.status.toLowerCase() == 'approved')
+        .length;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -230,12 +269,12 @@ class _CXRequestScreenState extends State<CXRequestScreen> {
                     _input(jobIdController, "Job ID", isNumber: true),
                     const SizedBox(height: 10),
 
-                    _dropdown("Region", regions, selectedRegion!, (v) {
+                    _dropdown("Region", regions, selectedRegion, (v) {
                       setState(() => selectedRegion = v!);
                     }),
                     const SizedBox(height: 10),
 
-                    _dropdown("Reason", reasons, selectedReason!, (v) {
+                    _dropdown("Reason", reasons, selectedReason, (v) {
                       setState(() => selectedReason = v!);
                     }),
                     const SizedBox(height: 10),
@@ -243,6 +282,7 @@ class _CXRequestScreenState extends State<CXRequestScreen> {
                     _input(expertIdController, "Expert ID", isNumber: true),
                     const SizedBox(height: 16),
 
+                    // ✅ BUTTON WITH SPINNER + TEXT INLINE
                     SizedBox(
                       width: double.infinity,
                       height: 48,
@@ -250,6 +290,8 @@ class _CXRequestScreenState extends State<CXRequestScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryAccent,
                           foregroundColor: Colors.white,
+                          disabledBackgroundColor:
+                              primaryAccent.withOpacity(0.7),
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -257,13 +299,28 @@ class _CXRequestScreenState extends State<CXRequestScreen> {
                         ),
                         onPressed: isLoading ? null : submit,
                         child: isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
+                            ? const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    "Submitting...",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                      letterSpacing: 0.5,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
                               )
                             : const Text(
                                 "Submit Request",
@@ -465,7 +522,7 @@ class _CXRequestScreenState extends State<CXRequestScreen> {
     );
   }
 
-  Widget _dropdown(String label, List<String> items, String value,
+  Widget _dropdown(String label, List<String> items, String? value,
       Function(String?) onChanged) {
     return DropdownButtonFormField<String>(
       value: value,
@@ -494,6 +551,7 @@ class _CXRequestScreenState extends State<CXRequestScreen> {
           .map((e) => DropdownMenuItem(value: e, child: Text(e)))
           .toList(),
       onChanged: onChanged,
+      validator: (v) => v == null ? "Select $label" : null,
     );
   }
 }

@@ -7,8 +7,7 @@ class ReassignRequestScreen extends StatefulWidget {
   const ReassignRequestScreen({super.key});
 
   @override
-  State<ReassignRequestScreen> createState() =>
-      _ReassignRequestScreenState();
+  State<ReassignRequestScreen> createState() => _ReassignRequestScreenState();
 }
 
 class _ReassignRequestScreenState extends State<ReassignRequestScreen>
@@ -42,10 +41,8 @@ class _ReassignRequestScreenState extends State<ReassignRequestScreen>
   void initState() {
     super.initState();
     loadRequests();
-
-    tabController = TabController(length: 3, vsync: this);
+    tabController = TabController(length: 4, vsync: this); // ✅ 4 tabs
     tabController.addListener(applyFilters);
-
     autoRefreshTimer =
         Timer.periodic(const Duration(minutes: 2), (_) => loadRequests());
   }
@@ -58,48 +55,86 @@ class _ReassignRequestScreenState extends State<ReassignRequestScreen>
   }
 
   Future<void> loadRequests() async {
-    final data = await ReassignService.fetchReassign();
-
-    setState(() {
-      allRequests = data.reversed.toList();
-      applyFilters();
-    });
+    if (!mounted) return;
+    try {
+      final data = await ReassignService.fetchReassign();
+      if (!mounted) return;
+      setState(() {
+        allRequests = data.reversed.toList();
+        applyFilters();
+      });
+    } catch (e) {
+      if (!mounted) return;
+    }
   }
 
   void applyFilters() {
-    String tab = ['All', 'Pending', 'Approved'][tabController.index];
-
+    // ✅ 4 tabs including Rejected
+    String tab =
+        ['All', 'Pending', 'Approved', 'Rejected'][tabController.index];
     filteredRequests = allRequests.where((e) {
       return tab == 'All' || e.status == tab;
     }).toList();
-
     setState(() {});
   }
 
   Future<void> submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => isSubmitting = true);
+    if (!_formKey.currentState!.validate()) return;
 
+    setState(() => isSubmitting = true);
+
+    try {
       await ReassignService.submitReassign(
         jobId: jobIdController.text,
         reason: selectedReason!,
         freeExpertId: freeExpertController.text,
         region: selectedRegion!,
       );
+    } catch (e) {
+      final errorStr = e.toString().toLowerCase();
+      final isJsonError = errorStr.contains('formatexception') ||
+          errorStr.contains('jsonunsupportedobjecterror') ||
+          errorStr.contains('unexpected character') ||
+          errorStr.contains('not a subtype') ||
+          errorStr.contains('type \'null\'');
 
-      setState(() => isSubmitting = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Submitted ✅')),
-      );
-
-      jobIdController.clear();
-      freeExpertController.clear();
-      selectedRegion = null;
-      selectedReason = null;
-
-      await loadRequests();
+      if (!isJsonError) {
+        if (mounted) {
+          setState(() => isSubmitting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Error: $e"),
+              backgroundColor: const Color(0xFFD50000),
+            ),
+          );
+        }
+        return;
+      }
     }
+
+    jobIdController.clear();
+    freeExpertController.clear();
+
+    if (mounted) {
+      setState(() {
+        selectedRegion = null;
+        selectedReason = null;
+      });
+    }
+
+    await loadRequests();
+
+    if (!mounted) return;
+
+    setState(() => isSubmitting = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Submitted ✅'),
+        backgroundColor: Color(0xFF00C853),
+        duration: Duration(seconds: 3),
+      ),
+    );
   }
 
   @override
@@ -107,6 +142,7 @@ class _ReassignRequestScreenState extends State<ReassignRequestScreen>
     int total = allRequests.length;
     int pending = allRequests.where((e) => e.status == 'Pending').length;
     int approved = allRequests.where((e) => e.status == 'Approved').length;
+    int rejected = allRequests.where((e) => e.status == 'Rejected').length; // ✅
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -129,7 +165,8 @@ class _ReassignRequestScreenState extends State<ReassignRequestScreen>
                 color: Colors.white.withOpacity(0.25),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.swap_horiz_rounded, color: Colors.white, size: 18),
+              child: const Icon(Icons.swap_horiz_rounded,
+                  color: Colors.white, size: 18),
             ),
             const SizedBox(width: 10),
             const Text(
@@ -149,12 +186,14 @@ class _ReassignRequestScreenState extends State<ReassignRequestScreen>
           indicatorWeight: 3,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white60,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+          labelStyle:
+              const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
           unselectedLabelStyle: const TextStyle(fontSize: 12),
           tabs: const [
             Tab(text: 'All'),
             Tab(text: 'Pending'),
             Tab(text: 'Approved'),
+            Tab(text: 'Rejected'), // ✅
           ],
         ),
       ),
@@ -172,6 +211,7 @@ class _ReassignRequestScreenState extends State<ReassignRequestScreen>
                 _summaryCard('Total', total, const Color(0xFF2979FF)),
                 _summaryCard('Pending', pending, const Color(0xFFFF6D00)),
                 _summaryCard('Approved', approved, const Color(0xFF00C853)),
+                _summaryCard('Rejected', rejected, const Color(0xFFD50000)), // ✅
               ],
             ),
 
@@ -250,19 +290,35 @@ class _ReassignRequestScreenState extends State<ReassignRequestScreen>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryAccent,
                   foregroundColor: Colors.white,
+                  disabledBackgroundColor: primaryAccent.withOpacity(0.7),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 child: isSubmitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
+                    ? const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Text(
+                            "Submitting...",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              letterSpacing: 0.5,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
                       )
                     : const Text(
                         'Submit Request',
@@ -282,8 +338,18 @@ class _ReassignRequestScreenState extends State<ReassignRequestScreen>
 
   // ---------------- CARD ----------------
   Widget _requestCard(ReassignRequest r) {
-    Color color =
-        r.status == 'Approved' ? const Color(0xFF00C853) : const Color(0xFFFF6D00);
+    // ✅ Full 3-state color + icon
+    Color color = r.status == 'Approved'
+        ? const Color(0xFF00C853)
+        : r.status == 'Rejected'
+            ? const Color(0xFFD50000)
+            : const Color(0xFFFF6D00);
+
+    IconData icon = r.status == 'Approved'
+        ? Icons.check_circle_rounded
+        : r.status == 'Rejected'
+            ? Icons.cancel_rounded
+            : Icons.access_time_rounded;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -301,7 +367,7 @@ class _ReassignRequestScreenState extends State<ReassignRequestScreen>
       ),
       child: Row(
         children: [
-          Icon(Icons.swap_horiz_rounded, color: primaryAccent, size: 26),
+          Icon(icon, color: color, size: 26),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -436,30 +502,16 @@ class _ReassignRequestScreenState extends State<ReassignRequestScreen>
   // ---------------- DATA ----------------
   List<DropdownMenuItem<String>> _regions() {
     return [
-      'Thane',
-      'Bangalore',
-      'Delhi',
-      'Pune',
-      'Noida',
-      'Gurugram',
-      'Mumbai',
-      'Navi Mumbai',
-      'Hyderabad'
+      'Thane', 'Bangalore', 'Delhi', 'Pune',
+      'Noida', 'Gurugram', 'Mumbai', 'Navi Mumbai', 'Hyderabad'
     ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList();
   }
-  
 
   List<DropdownMenuItem<String>> _reasons() {
     return [
-      'Denying to do',
-      'Favourite expert',
-      'Cross Hood',
-      'Customer Request',
-      'Behaviour issue',
-      'Need pet friendly ex',
-      'Not Responding',
-      'Logged Out',
-      'Poor Quality of Work'
+      'Denying to do', 'Favourite expert', 'Cross Hood',
+      'Customer Request', 'Behaviour issue', 'Need pet friendly ex',
+      'Not Responding', 'Logged Out', 'Poor Quality of Work'
     ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList();
   }
 }
