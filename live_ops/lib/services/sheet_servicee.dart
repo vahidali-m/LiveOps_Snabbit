@@ -4,9 +4,7 @@ import '../models/ut_request_model.dart';
 
 class SheetService {
   // ✅ Your URLs (already correct)
-  static const String webAppUrl =
-      'https://script.google.com/macros/s/AKfycbxABITsPREHcmGyceoJbsXdaLTdzBuGPEMyXOEzyu-4GkYs5Jdq9pyEN_HnUEAoNQ1s2g/exec';
-
+  static const String webAppUrl = 'https://script.google.com/macros/s/AKfycbxABITsPREHcmGyceoJbsXdaLTdzBuGPEMyXOEzyu-4GkYs5Jdq9pyEN_HnUEAoNQ1s2g/exec';
   static const String csvUrl =
       'https://docs.google.com/spreadsheets/d/1ujTe80AtniAdLrLUXG6V5mQGKC829Wek_PirLFLzpNA/export?format=csv';
 
@@ -26,6 +24,7 @@ class SheetService {
           "Content-Type": "application/json",
         },
         body: jsonEncode({
+          "type": 'ut',
           "requestBy": requestBy,
           "expertId": expertId,
           "region": region,
@@ -80,8 +79,8 @@ class SheetService {
             utHours: _clean(row[3]),
             reason: _clean(row[4]),
             hasJob: _clean(row[5]),
-            status: _clean(row[6]),
-            requestBy: _clean(row[7]), // ✅ FIXED INDEX
+            status: _clean(row[7]),
+            requestBy: _clean(row[6]), // ✅ FIXED INDEX
           ));
         }
 

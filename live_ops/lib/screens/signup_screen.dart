@@ -68,7 +68,6 @@ class _SignupScreenState extends State<SignupScreen> {
     const bgColor = Color(0xFF0F172A);
     const cardColor = Color(0xFF1E293B);
     const textPrimary = Colors.white;
-    const textSecondary = Colors.grey;
 
     return Scaffold(
       backgroundColor: bgColor,

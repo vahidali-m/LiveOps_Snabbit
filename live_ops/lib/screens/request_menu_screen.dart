@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:live_ops/models/cx_request_model.dart';
 import 'package:live_ops/screens/cx_request_screen.dart';
 import 'package:live_ops/screens/reassign_request_screen.dart.dart';
 import 'ut_request_screen.dart';
@@ -7,20 +6,50 @@ import 'ut_request_screen.dart';
 class RequestMenuScreen extends StatelessWidget {
   const RequestMenuScreen({super.key});
 
-  // 🎨 SAME THEME
-  final bgColor = const Color(0xFF0F172A);
-  final cardColor = const Color(0xFF1E293B);
-  final textPrimary = Colors.white;
-  final textSecondary = Colors.grey;
+  // 🎨 WHITE + PINK THEME
+  static const bgColor = Color(0xFFF5F5F7);
+  static const cardColor = Colors.white;
+  static const primaryAccent = Color(0xFFE91E63);
+  static const textPrimary = Color(0xFF1A1A2E);
+  static const textSecondary = Color(0xFF7A7A9A);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFE91E63),
         elevation: 0,
-        title: const Text('OPS REQUEST'),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFAD1457), Color(0xFFE91E63)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.25),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.assignment_rounded, color: Colors.white, size: 18),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              'OPS REQUEST',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.5,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -34,7 +63,7 @@ class RequestMenuScreen extends StatelessWidget {
               title: "UT Requests",
               subtitle: "Manage UT hours & approvals",
               icon: Icons.access_time,
-              color: Colors.cyanAccent,
+              color: const Color(0xFF2979FF),
               onTap: () {
                 Navigator.push(
                   context,
@@ -45,7 +74,7 @@ class RequestMenuScreen extends StatelessWidget {
               },
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // 🔥 REASSIGN CARD
             _menuCard(
@@ -53,7 +82,7 @@ class RequestMenuScreen extends StatelessWidget {
               title: "Reassign Requests",
               subtitle: "Reassign jobs to experts",
               icon: Icons.swap_horiz,
-              color: Colors.orangeAccent,
+              color: primaryAccent,
               onTap: () {
                 Navigator.push(
                   context,
@@ -61,19 +90,18 @@ class RequestMenuScreen extends StatelessWidget {
                     builder: (_) => const ReassignRequestScreen(),
                   ),
                 );
-
-                
               },
             ),
-            const SizedBox(height: 20),
 
-            // 🔥 UT REQUEST CARD
+            const SizedBox(height: 16),
+
+            // 🔥 CX REQUEST CARD
             _menuCard(
               context,
-              title: "Cx issue request",
+              title: "Cx Issue Request",
               subtitle: "Share Cx related issue",
-              icon: Icons.access_time,
-              color: const Color.fromARGB(255, 236, 255, 24),
+              icon: Icons.contact_support,
+              color: const Color(0xFF9C27B0),
               onTap: () {
                 Navigator.push(
                   context,
@@ -83,7 +111,6 @@ class RequestMenuScreen extends StatelessWidget {
                 );
               },
             ),
-
           ],
         ),
       ),
@@ -107,7 +134,13 @@ class RequestMenuScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: cardColor,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.4)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -115,7 +148,7 @@ class RequestMenuScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(icon, color: color, size: 28),
@@ -130,7 +163,7 @@ class RequestMenuScreen extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -139,7 +172,7 @@ class RequestMenuScreen extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     subtitle,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: textSecondary,
                       fontSize: 13,
                     ),
@@ -149,7 +182,7 @@ class RequestMenuScreen extends StatelessWidget {
             ),
 
             // ARROW
-            Icon(Icons.arrow_forward_ios,
+            const Icon(Icons.arrow_forward_ios_rounded,
                 color: textSecondary, size: 16),
           ],
         ),
