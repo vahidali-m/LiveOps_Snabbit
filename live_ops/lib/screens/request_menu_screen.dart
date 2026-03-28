@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:live_ops/models/cx_request_model.dart';
+import 'package:live_ops/screens/cx_request_screen.dart';
 import 'package:live_ops/screens/reassign_request_screen.dart.dart';
 import 'ut_request_screen.dart';
 
@@ -59,8 +61,29 @@ class RequestMenuScreen extends StatelessWidget {
                     builder: (_) => const ReassignRequestScreen(),
                   ),
                 );
+
+                
               },
             ),
+            const SizedBox(height: 20),
+
+            // 🔥 UT REQUEST CARD
+            _menuCard(
+              context,
+              title: "Cx issue request",
+              subtitle: "Share Cx related issue",
+              icon: Icons.access_time,
+              color: const Color.fromARGB(255, 236, 255, 24),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const CXRequestScreen(),
+                  ),
+                );
+              },
+            ),
+
           ],
         ),
       ),
